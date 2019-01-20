@@ -11,17 +11,49 @@ int is_digit(char ch) {
     return 0;
 }
 
+void update_bar(char *progress_bar, int *counter, int *ipercentage, char *percentage, char *str) {
+
+        *ipercentage = *ipercentage + 5;
+        progress_bar[*counter] = '#';
+
+        (*counter)++;
+
+        sprintf(percentage, "%d", *ipercentage);
+        strcat(percentage, "%");
+
+        progress_bar[23] = '\0';
+                
+        strcat(progress_bar, percentage);
+
+        printf("\rWriting file sequentially...\t\t%s", progress_bar);
+    
+        fflush(stdout);
+}
+
+void reset_bar(char *pbar, char *pbar0, char *percentage, int *counter, int *ipercentage) {
+    *counter = 1;
+    *ipercentage = 0;
+    strcpy(percentage, "0%");
+    strcpy(pbar, pbar0);
+}
+
+
 int main(int argc, char **argv) {
 
     srand(time(NULL));
 
-    int blockSize = 1024, times;
+    int blockSize = 1024, times, ipercentage = 0;
+    int verbose = 0;
+
     char *str = (char*)malloc(blockSize), file_name[20], prefix;
+    char progress_bar[30] = "[--------------------] ";
+    char progress_bar0[] = "[--------------------] ";
+    char percentage[5] = "0%";
 
     struct timespec t1, t2;
     double dtime, write_speed, read_speed;
 
-    int i, file_size;
+    int i, file_size, aux, counter = 1, iterations = 0;
 
     FILE *ptr;
 
@@ -46,6 +78,9 @@ int main(int argc, char **argv) {
             }
             i += 1;
         }
+        else if (strcmp(argv[i], "-v") == 0) {
+            verbose = 1;
+        }
         else {
             printf("Unrecognized argument %s. Exiting script\n", argv[i]);
             return EXIT_FAILURE;
@@ -58,6 +93,7 @@ int main(int argc, char **argv) {
         str[i] = rand() % 256;
     }
 
+
     if (prefix == 'M')
         times = 1024;
     else // if equals 'G'
@@ -65,11 +101,41 @@ int main(int argc, char **argv) {
 
     ptr = fopen(file_name, "wb+");
 
+    if (ptr == NULL) {
+        printf("Could not open file!\n");
+        return EXIT_FAILURE;
+    }
+
+
+    strcat(progress_bar, percentage);
+
+    printf("\rWriting file sequentially...\n");
+
+    if (verbose) printf("%s", progress_bar);
+    fflush(stdout);
+
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
+    aux = times * file_size / 20;
+
     for (i = 0; i < times * file_size; i ++) {
+        
+        if (verbose) {
+            iterations++;
+            if (iterations  == aux) {
+                iterations = 0;
+                update_bar(&progress_bar[0], &counter, &ipercentage, &percentage[0], &file_name[0]);
+            }
+        }
+
         fwrite(str, sizeof(char), blockSize, ptr);
     }
+
+    if (verbose) printf("\rWriting file sequentially...\t\t%s\n", progress_bar);
+
+    printf("Writing file sequentially...\t\tdone!\n\n");
+
+    reset_bar(&progress_bar[0], &progress_bar0[0], &percentage[0], &counter, &ipercentage);
 
     clock_gettime(CLOCK_MONOTONIC, &t2);
 
@@ -79,12 +145,18 @@ int main(int argc, char **argv) {
     if (prefix == 'G')
         write_speed *= 1024;
 
-    printf("%d %cB written in %.4f seconds. Sequential write speed was %.2f MB/s\n\n", file_size, prefix, dtime, write_speed); 
+    printf("%d %cB written in %.4f seconds. Sequential write speed was %.2f MB/s.\n\n", file_size, prefix, dtime, write_speed); 
 
     fclose(ptr);
 
 
+
     ptr = fopen(file_name, "rb");
+
+    if (ptr == NULL) {
+        printf("Could not open file!\n");
+        return EXIT_FAILURE;
+    }
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
