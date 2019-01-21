@@ -60,6 +60,8 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
         fwrite(data, sizeof(char), blockSize, fp);
     }
 
+    //system("sync");
+
     if (progress)
         printf("\r%s\t\t%s\n%s\t\tdone!\n\n", message, message, progress_bar);
     else
@@ -78,6 +80,10 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
     printf("%d %cB written in %.4f seconds. Average sequential write speed was %.2f MB/s.\n\n", file_size, prefix, dtime, write_speed); 
 
     fclose(fp);
+
+    /* Clear cache and redirect output (requires sudo) */
+    printf("Clearing cache...\n");
+    system("sync ; echo 1 | sudo tee /proc/sys/vm/drop_caches > /dev/null 2>&1");
 
 /* ----- Reading file ----- */
 
