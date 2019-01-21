@@ -1,6 +1,6 @@
 #include "sequential.h"
 
-int seq_tests(int progress, char prefix, int file_size, char *file_name) {
+int seq_tests(int progress, char prefix, int file_size, char *file_name, int clear_cache) {
 
     struct timespec t1, t2;
     double dtime, write_speed, read_speed;
@@ -11,11 +11,18 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
     char progress_bar[30] = "[--------------------] ";
     char progress_bar0[] = "[--------------------] ";
     char percentage[5] = "0%";
-    char message[] = "Writing file sequentially...";
-
-
+    char message[] = "Writing file...";
     FILE *fp;
-    
+
+    int f = open(file_name, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+
+    lseek(f, 0, SEEK_SET);
+
+    if (f < 0) {
+        printf("Could not open file!\n");
+        return EXIT_FAILURE;
+    }
+
     strcat(progress_bar, percentage);
     
     // Create random block of data.
@@ -28,13 +35,7 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
     else // if equals 'G'
         times = 1024 * 1024;
 
-
-    fp = fopen(file_name, "wb+");
-
-    if (fp == NULL) {
-        printf("Could not open file!\n");
-        return EXIT_FAILURE;
-    }
+    printf(ANSI_BOLD ANSI_COLOR_BLUE "Performing sequential tests\n\n" ANSI_COLOR_RESET);
 
     if (progress) 
         printf("%s\t\t%s\r", message, progress_bar);
@@ -42,6 +43,7 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
         printf("\r%s", message);
     
     fflush(stdout);
+    fsync(f);
 
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
@@ -57,15 +59,14 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
             }
         }
 
-        fwrite(data, sizeof(char), blockSize, fp);
+        write(f, data, blockSize);
     }
 
-    //system("sync");
 
     if (progress)
-        printf("\r%s\t\t%s\n%s\t\tdone!\n\n", message, message, progress_bar);
+        printf("\r%s\t\t%s\n%s\t\tdone!\n", message, progress_bar, message);
     else
-        printf("\t\tdone!\n\n");
+        printf("\t\tdone!\n");
 
     reset_bar(&progress_bar[0], &progress_bar0[0], &percentage[0], &counter, &ipercentage);
 
@@ -77,26 +78,34 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
     if (prefix == 'G')
         write_speed *= 1024;
 
-    printf("%d %cB written in %.4f seconds. Average sequential write speed was %.2f MB/s.\n\n", file_size, prefix, dtime, write_speed); 
+    printf("%d %cB written, %.5f s, %.1f MB/s\n\n", file_size, prefix, dtime, write_speed); 
 
-    fclose(fp);
+    close(f);
 
     /* Clear cache and redirect output (requires sudo) */
-    printf("Clearing cache...\n");
-    system("sync ; echo 1 | sudo tee /proc/sys/vm/drop_caches > /dev/null 2>&1");
+    if (clear_cache) {
+        printf("Clearing cache...\n");
+        system("sync ; echo 1 | sudo tee /proc/sys/vm/drop_caches > /dev/null 2>&1");
+    }
 
 /* ----- Reading file ----- */
 
-    fp = fopen(file_name, "rb");
+    printf("Reading file...");
+    fflush(stdout);
 
-    if (fp == NULL) {
+    fp = fopen(file_name, "r");
+
+    if (f < 0) {
         printf("Could not open file!\n");
         return EXIT_FAILURE;
     }
 
+
     clock_gettime(CLOCK_MONOTONIC, &t1);
 
-    while(fgetc(fp) != EOF) {}
+
+    while (fgetc(fp) != EOF) {}
+    //printf("\nBytes read: %ld\n", read(f, buf,1024 * times * file_size));
 
     clock_gettime(CLOCK_MONOTONIC, &t2);
     
@@ -106,8 +115,9 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name) {
     if (prefix == 'G')
         read_speed *= 1024;
 
-    printf("%.4fs taken to read file. Average sequential read speed was %.2f MB/s\n", dtime, read_speed);
+    printf("\t\tdone!\n");
 
+    printf("%d %cB read, %.5f s, %.1f MB/s\n\n", file_size, prefix, dtime, read_speed); 
 
     fclose(fp);
 
