@@ -45,9 +45,10 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name, int cle
     fflush(stdout);
     fsync(f);
 
-    clock_gettime(CLOCK_MONOTONIC, &t1);
 
     aux = times * file_size / 20;
+
+    clock_gettime(CLOCK_MONOTONIC, &t1);
 
     for (i = 0; i < times * file_size; i ++) {
         
@@ -62,6 +63,7 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name, int cle
         write(f, data, blockSize);
     }
 
+    clock_gettime(CLOCK_MONOTONIC, &t2);
 
     if (progress)
         printf("\r%s\t\t%s\n%s\t\tdone!\n", message, progress_bar, message);
@@ -69,8 +71,6 @@ int seq_tests(int progress, char prefix, int file_size, char *file_name, int cle
         printf("\t\tdone!\n");
 
     reset_bar(&progress_bar[0], &progress_bar0[0], &percentage[0], &counter, &ipercentage);
-
-    clock_gettime(CLOCK_MONOTONIC, &t2);
 
     dtime = (t2.tv_sec - t1.tv_sec) + (double) (t2.tv_nsec - t1.tv_nsec) * 1e-9;
     write_speed = file_size / dtime;
