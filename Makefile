@@ -52,5 +52,5 @@ remake: clean objFolder $(PROJ_NAME)
 clean:
 	@ echo -e '\033[1;37mCleaning up files...\033[0m'
 	@ rm -rf ./obj/*.o *~ $(PROJ_NAME)
-	@ rm file_sdb
+	@ rm tempfile
 	@ rmdir obj

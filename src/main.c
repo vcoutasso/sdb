@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
 
     int progress = 0;
 
-    char file_name[20] = "file_sdb", prefix = 'M';
+    char file_name[20] = "tempfile", prefix = 'M';
     int i, file_size = 1024;
     int clear_cache = 0;
 
@@ -41,8 +41,21 @@ int main(int argc, char **argv) {
         else if (strcmp(argv[i], "-p") == 0) {
             progress = 1;
         }
+	else if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+		printf("sdb - Simple Disk Benchmark\n\n");
+		printf("Usage: sdb OPTIONS\n");
+		printf("Test your disk writing and reading speeds\n");
+		printf("\n -of, --output-file\tsets name of the file that will be written. Default: tempfile");
+		printf("\n -s,  --size       \tsets size of the file. Size must be provided with appropriate suffix (e.g. 1024MB or 2GB). Default: 1024MB ");
+		printf("\n -p,  --progress   \tprogress bar is displayed");
+		printf("\n -c,  --clear-cache\tclears cache. Requires super user permissions");
+
+		printf("\n -h,  --help       \tprints this help menu\n");
+
+		return EXIT_SUCCESS;
+	}
         else {
-            printf("Unrecognized argument %s. Exiting script\n", argv[i]);
+            printf("sdb: Invalid argument %s. Exiting script\n", argv[i]);
             return EXIT_FAILURE;
         }
     
